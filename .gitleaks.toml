@@ -1,0 +1,13 @@
+title = "Sana backend secret scanning"
+[extend]
+useDefault = true
+
+[[rules]]
+id = "walletwallet-api-key"
+description = "WalletWallet credential"
+regex = '''\bww_(?:live|test)_[A-Za-z0-9_-]{16,}\b'''
+keywords = ["ww_live_", "ww_test_"]
+
+[[allowlists]]
+description = "Generated artifacts and downloaded tools are not publication sources"
+paths = ['''(^|/)(target|\.tools|\.git)/''']

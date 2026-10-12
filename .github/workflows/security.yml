@@ -1,0 +1,51 @@
+name: Security
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 8 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  secrets-and-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: python3 scripts/install-security-tools.py
+      - run: .tools/gitleaks dir . --redact --no-banner
+      - run: .tools/gitleaks git . --redact --no-banner --log-opts='--all'
+      - run: ./mvnw --batch-mode org.cyclonedx:cyclonedx-maven-plugin:2.9.1:makeAggregateBom -DoutputName=bom.cdx
+      - run: .tools/osv-scanner scan source --lockfile=target/bom.cdx.json
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: github/codeql-action/init@f3c49fd1ef3281abc41069b3dd22807a60c963f6
+        with:
+          languages: java-kotlin
+          queries: security-extended
+          build-mode: manual
+      - run: ./mvnw --batch-mode -DskipTests package
+      - uses: github/codeql-action/analyze@f3c49fd1ef3281abc41069b3dd22807a60c963f6
+        with:
+          output: target/codeql
+          upload: ${{ !github.event.repository.private }}
+      - run: python3 scripts/check-codeql.py
