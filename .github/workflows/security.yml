@@ -45,7 +45,7 @@ jobs:
           queries: security-extended
           build-mode: manual
       - run: ./mvnw --batch-mode -DskipTests package
-      - uses: github/codeql-action/analyze@f3c49fd1ef3281abc41069b3dd22807a60c963f6
+      - uses: github/codeql-action/analyze@38112626f97ac1fd7acf3df7ebca51f4677c1b38
         with:
           output: target/codeql
           upload: ${{ !github.event.repository.private }}
